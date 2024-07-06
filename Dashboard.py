@@ -1,15 +1,30 @@
-import streamlit as st
 import pandas as pd
+import numpy as np
+import streamlit as st
 import plotly.express as px
-
-st.title('Dashboard de Ações')
 
 df_ibov = pd.read_csv('../../IBOV-top10.csv', parse_dates=True, index_col='Date')
 
-df_returns = np.log(df_ibov.pct_change().dropna())
-df_cumulative_returns = (1 + df_returns).cumprod()
+min_date = df_ibov.index[0].to_pydatetime()
+max_date = df_ibov.index[-1].to_pydatetime()
 
 color_scheme=px.colors.qualitative.Plotly
+
+st.title('Dashboard de Ações')
+st.sidebar.title('Filtros')
+
+todo_periodo = st.sidebar.checkbox('Dados de todo o período', value = True)
+if todo_periodo:
+    start_date = ''
+    end_date = ''
+else:
+    start_date, end_date = st.sidebar.slider('Datas', min_date, max_date, (min_date, max_date))
+
+if start_date and end_date:
+    df_ibov = df_ibov[(df_ibov.index >= start_date) & (df_ibov.index <= end_date)]
+
+df_log_returns = np.log(df_ibov / df_ibov.shift(1)).dropna()
+df_cumulative_returns = np.exp(df_log_returns.cumsum())
 
 aba1, aba2, aba3 = st.tabs(['Gráficos', 'Estatísticas', 'Dados brutos'])
 
@@ -36,18 +51,17 @@ with aba2:
         with coluna1:
             price_mean = df_ibov[ticker].mean()
             price_std = df_ibov[ticker].std()
-            returns_mean = df_returns[ticker].mean() * 100
-            returns_std = df_returns[ticker].std() * 100
-            print(returns_mean)
+            log_returns_mean = df_log_returns[ticker].mean() * 100
+            log_returns_std = df_log_returns[ticker].std() * 100
             st.metric('Média de preços para o período', 'R$ {:.2f}'.format(price_mean).replace('.', ','))
             st.metric('Desvio padrão dos preços para o período', 'R$ {:.2f}'.format(price_std).replace('.', ','))
-            st.metric('Média de retornos para o período', '{:.2f} %'.format(returns_mean).replace('.', ','))
-            st.metric('Desvio padrão dos retornos para o período', '{:.2f} %'.format(returns_std).replace('.', ','))
+            st.metric('Média de retornos logarítmicos para o período', '{:.2f} %'.format(log_returns_mean).replace('.', ','))
+            st.metric('Desvio padrão dos retornos logarítmicos para o período', '{:.2f} %'.format(log_returns_std).replace('.', ','))
         with coluna2:
             color = color_scheme[i]
-            fig_hist = px.histogram(data_frame=df_returns[ticker], marginal='box', color_discrete_sequence=[color])
+            fig_hist = px.histogram(data_frame=df_log_returns[ticker], marginal='box', color_discrete_sequence=[color])
             fig_hist.update_layout(
-                title='Histograma dos Retornos',
+                title='Histograma dos Retornos Logarítmicos',
                 xaxis_title='Valor',
                 yaxis_title='Contagem',
                 legend_title='Ticker')
@@ -55,5 +69,5 @@ with aba2:
 
 with aba3:
     st.dataframe(df_ibov, use_container_width=True, column_config={
-        'Date': st.column_config.DatetimeColumn(format='DD/MM/YYYY'
-    )})
+        'Date': st.column_config.DatetimeColumn(format='DD/MM/YYYY')
+    })
