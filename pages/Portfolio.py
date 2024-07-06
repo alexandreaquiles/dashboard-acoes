@@ -6,8 +6,8 @@ from bcb import sgs
 
 st.title('Simulação de Portfólio de Ações')
 
-df_ibov = pd.read_csv('../../IBOV-top10.csv', parse_dates=True, index_col='Date')
-df_ibovespa = pd.read_csv('../../IBOVESPA.csv', parse_dates=True, index_col='Date')
+df_ibov = pd.read_csv('IBOV-top10.csv', parse_dates=True, index_col='Date')
+df_ibovespa = pd.read_csv('IBOVESPA.csv', parse_dates=True, index_col='Date')
 df_ibovespa = df_ibovespa[['Close']].copy()
 
 all_tickers = list(df_ibov.columns)

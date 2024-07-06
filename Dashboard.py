@@ -3,7 +3,7 @@ import numpy as np
 import streamlit as st
 import plotly.express as px
 
-df_ibov = pd.read_csv('../../IBOV-top10.csv', parse_dates=True, index_col='Date')
+df_ibov = pd.read_csv('IBOV-top10.csv', parse_dates=True, index_col='Date')
 
 min_date = df_ibov.index[0].to_pydatetime()
 max_date = df_ibov.index[-1].to_pydatetime()
