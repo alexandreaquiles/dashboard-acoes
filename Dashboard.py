@@ -3,10 +3,10 @@ import numpy as np
 import streamlit as st
 import plotly.express as px
 
-df_ibov = pd.read_csv('IBOV-top10.csv', parse_dates=True, index_col='Date')
+df_top10 = pd.read_csv('top10-stocks.csv', parse_dates=True, index_col='Date')
 
-min_date = df_ibov.index[0].to_pydatetime()
-max_date = df_ibov.index[-1].to_pydatetime()
+min_date = df_top10.index[0].to_pydatetime()
+max_date = df_top10.index[-1].to_pydatetime()
 
 color_scheme=px.colors.qualitative.Plotly
 
@@ -21,15 +21,15 @@ else:
     start_date, end_date = st.sidebar.slider('Datas', min_date, max_date, (min_date, max_date))
 
 if start_date and end_date:
-    df_ibov = df_ibov[(df_ibov.index >= start_date) & (df_ibov.index <= end_date)]
+    df_top10 = df_top10[(df_top10.index >= start_date) & (df_top10.index <= end_date)]
 
-df_log_returns = np.log(df_ibov / df_ibov.shift(1)).dropna()
+df_log_returns = np.log(df_top10 / df_top10.shift(1)).dropna()
 df_cumulative_returns = np.exp(df_log_returns.cumsum())
 
 aba1, aba2, aba3 = st.tabs(['Gráficos', 'Estatísticas', 'Dados brutos'])
 
 with aba1:
-    fig_precos = px.line(data_frame=df_ibov, y=df_ibov.columns, color_discrete_sequence=color_scheme)
+    fig_precos = px.line(data_frame=df_top10, y=df_top10.columns, color_discrete_sequence=color_scheme)
     fig_precos.update_layout(
         title='Fechamento histórico',
         xaxis_title='Data',
@@ -46,11 +46,11 @@ with aba1:
     st.plotly_chart(fig_retornos_acumulados, use_container_width= True)
 
 with aba2:
-    for i, ticker in enumerate(df_ibov.columns):
+    for i, ticker in enumerate(df_top10.columns):
         coluna1, coluna2 = st.columns([0.3, 0.7])
         with coluna1:
-            price_mean = df_ibov[ticker].mean()
-            price_std = df_ibov[ticker].std()
+            price_mean = df_top10[ticker].mean()
+            price_std = df_top10[ticker].std()
             log_returns_mean = df_log_returns[ticker].mean() * 100
             log_returns_std = df_log_returns[ticker].std() * 100
             st.metric('Média de preços para o período', 'R$ {:.2f}'.format(price_mean).replace('.', ','))
@@ -68,6 +68,6 @@ with aba2:
             st.plotly_chart(fig_hist, use_container_width= True)
 
 with aba3:
-    st.dataframe(df_ibov, use_container_width=True, column_config={
+    st.dataframe(df_top10, use_container_width=True, column_config={
         'Date': st.column_config.DatetimeColumn(format='DD/MM/YYYY')
     })

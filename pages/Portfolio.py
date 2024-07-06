@@ -2,20 +2,18 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 import plotly.express as px
-from bcb import sgs
 
 st.title('Simulação de Portfólio de Ações')
 
-df_ibov = pd.read_csv('IBOV-top10.csv', parse_dates=True, index_col='Date')
-df_ibovespa = pd.read_csv('IBOVESPA.csv', parse_dates=True, index_col='Date')
-df_ibovespa = df_ibovespa[['Close']].copy()
+df_top10 = pd.read_csv('top10-stocks.csv', parse_dates=True, index_col='Date')
+df_ibovespa = pd.read_csv('IBOVESPA.csv', parse_dates=True, index_col='Date')[['Close']].copy()
+df_selic = pd.read_csv('selic_anualizada.csv', parse_dates=True, index_col='Data')
 
-all_tickers = list(df_ibov.columns)
 
-min_date = df_ibov.index[0].to_pydatetime()
-max_date = df_ibov.index[-1].to_pydatetime()
+all_tickers = list(df_top10.columns)
 
-work_days = 252
+min_date = df_top10.index[0].to_pydatetime()
+max_date = df_top10.index[-1].to_pydatetime()
 
 st.sidebar.title('Portfólio de Ações')
 
@@ -27,13 +25,12 @@ else:
     start_date, end_date = st.sidebar.slider('Datas', min_date, max_date, (min_date, max_date))
 
 if start_date and end_date:
-    df_ibov = df_ibov[(df_ibov.index >= start_date) & (df_ibov.index <= end_date)]
+    df_top10 = df_top10[(df_top10.index >= start_date) & (df_top10.index <= end_date)]
     df_ibovespa = df_ibovespa[(df_ibovespa.index >= start_date) & (df_ibovespa.index <= end_date)]
+    df_selic = df_selic[(df_selic.index >= start_date) & (df_selic.index <= end_date)]
 
-def get_risk_free_rate(start_date, end_date):
-    cdi = sgs.get({'BCB-Demab': 11}, start=start_date, end = end_date)
-    risk_free_rate_cdi = cdi.mean() / 100 * work_days
-    return risk_free_rate_cdi[0]
+def get_risk_free_rate():
+    return df_selic['SELIC_Anualizada'].mean() / 100
 
 def random_allocation(size):
     rand = np.random.rand(size)
@@ -67,10 +64,9 @@ def allocation_simulation(log_returns, risk_free_rate, iterations=1000):
 
     return weights, cumulative_returns, risk, expected_return, sharpe
 
-def optimize_portfolio(tickers):
-    df_portifolio = df_ibov[tickers]
+def optimize_portfolio(tickers, risk_free_rate):
+    df_portifolio = df_top10[tickers]
     log_returns = np.log(df_portifolio / df_portifolio.shift(1)).dropna()
-    risk_free_rate = get_risk_free_rate(start_date, end_date)
     weights, cumulative_returns, risk, expected_return, sharpe = allocation_simulation(log_returns, risk_free_rate)
     max_sharpe_idx = np.argmax(sharpe)
     return weights[max_sharpe_idx], cumulative_returns[max_sharpe_idx], risk[max_sharpe_idx], expected_return[max_sharpe_idx], sharpe[max_sharpe_idx]
@@ -79,17 +75,24 @@ tickers = st.sidebar.multiselect('Selecione os tickers', options=all_tickers, de
 if len(tickers) == 0:
     st.sidebar.error('Por favor, selecione um ou mais tickers.', icon='⛔')
 if st.sidebar.button('Otimizar Portfólio'):
-    weights, cumulative_returns, risk, expected_return, sharpe = optimize_portfolio(tickers)
+    risk_free_rate = get_risk_free_rate()
+    weights, cumulative_returns, risk, expected_return, sharpe = optimize_portfolio(tickers, risk_free_rate)
     rounded_weights = np.round(weights * 100).astype(int)
-    st.header('Alocação')
-    st.dataframe(pd.DataFrame(data=[rounded_weights], columns=tickers), use_container_width=True, hide_index=True)
-    coluna1, coluna2, coluna3 = st.columns(3)
+    st.header('Alocação randômica')
+    st.caption('com taxa de Sharpe máxima')
+
+    df_alocacao = pd.DataFrame(data=[rounded_weights], columns=tickers)
+    st.dataframe(df_alocacao, use_container_width=True, hide_index=True)
+    st.subheader('Indicadores para o período')
+    coluna1, coluna2, coluna3, coluna4 = st.columns(4)
     with coluna1:
-        st.metric('Retorno esperado portfólio', '{:.2f} %'.format(expected_return).replace('.', ','))
+        st.metric('Retorno esperado portfólio', '{:.2f} %'.format(expected_return * 100).replace('.', ','))
     with coluna2:
-        st.metric('Risco portfólio', '{:.2f} %'.format(risk).replace('.', ','))
+        st.metric('Risco portfólio', '{:.2f} %'.format(risk * 100).replace('.', ','))
     with coluna3:
-        st.metric('Taxa de Sharpe portfólio', '{:.2f} %'.format(sharpe).replace('.', ','))
+        st.metric('Taxa livre de risco (SELIC)', '{:.2f} %'.format(risk_free_rate * 100).replace('.', ','))
+    with coluna4:
+        st.metric('Taxa de Sharpe portfólio', '{:.2f}'.format(sharpe).replace('.', ','))
 
     log_ibovespa_returns = np.log(df_ibovespa / df_ibovespa.shift(1)).dropna()
     cumulative_ibovespa_returns = np.exp(log_ibovespa_returns.cumsum())
