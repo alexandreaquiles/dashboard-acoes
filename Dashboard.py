@@ -24,7 +24,7 @@ if start_date and end_date:
     df_top10 = df_top10[(df_top10.index >= start_date) & (df_top10.index <= end_date)]
 
 df_log_returns = np.log(df_top10 / df_top10.shift(1)).dropna()
-df_cumulative_returns = np.exp(df_log_returns.cumsum())
+df_cumulative_returns = np.exp(df_log_returns.cumsum()) - 1
 
 aba1, aba2, aba3 = st.tabs(['Gráficos', 'Estatísticas', 'Dados brutos'])
 
@@ -33,15 +33,15 @@ with aba1:
     fig_precos.update_layout(
         title='Fechamento histórico',
         xaxis_title='Data',
-        yaxis_title='Preço fechamento',
+        yaxis_title='Preço fechamento (R$)',
         legend_title='Ticker')
     st.plotly_chart(fig_precos, use_container_width= True)
 
-    fig_retornos_acumulados = px.line(data_frame=df_cumulative_returns, y=df_cumulative_returns.columns, color_discrete_sequence=color_scheme)
+    fig_retornos_acumulados = px.line(data_frame=df_cumulative_returns * 100, y=df_cumulative_returns.columns, color_discrete_sequence=color_scheme)
     fig_retornos_acumulados.update_layout(
         title='Retornos acumulados',
         xaxis_title='Data',
-        yaxis_title='Retorno acumulado',
+        yaxis_title='Retorno acumulado (%)',
         legend_title='Ticker')
     st.plotly_chart(fig_retornos_acumulados, use_container_width= True)
 
