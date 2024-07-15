@@ -32,7 +32,7 @@ if start_date and end_date:
 def get_risk_free_rate():
     return df_selic['SELIC_Anualizada'].mean() / 100
 
-def random_all_simulationsocation(size):
+def random_allocation(size):
     rand = np.random.rand(size)
     normalized_rand = rand / rand.sum()
     return normalized_rand
@@ -48,7 +48,7 @@ def allocation_simulation(log_returns, risk_free_rate, iterations=1000):
     sharpe = np.zeros(iterations)
     
     for i in range(iterations):
-        allocation = random_all_simulationsocation(portfolio_size)
+        allocation = random_allocation(portfolio_size)
         weights[i, :] = allocation
 
         portfolio_returns = log_returns @ allocation 
